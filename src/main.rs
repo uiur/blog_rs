@@ -22,10 +22,39 @@ struct Post {
     body: String,
 }
 
-struct PostRecord {
-    id: sqlx::types::Uuid,
-    title: String,
-    body: String,
+impl Post {
+    async fn find_all(pool: &PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
+        let records = sqlx::query!("select id, title, body from posts")
+            .fetch_all(pool)
+            .await?;
+
+        let posts = records
+            .into_iter()
+            .map(|record| Post {
+                id: record.id.to_string(),
+                title: record.title,
+                body: record.body,
+            })
+            .collect();
+
+        Ok(posts)
+    }
+
+    async fn find(pool: &PgPool, id: &str) -> Result<Post, Box<dyn std::error::Error>> {
+        let uuid = sqlx::types::Uuid::parse_str(&id)?;
+
+        let record = sqlx::query!("select id, title, body from posts where id = $1", uuid)
+            .fetch_one(pool)
+            .await?;
+
+        let post = Post {
+            id: record.id.to_string(),
+            title: record.title,
+            body: record.body,
+        };
+
+        Ok(post)
+    }
 }
 
 #[get("/")]
@@ -33,17 +62,9 @@ async fn index(
     hb: web::Data<Handlebars<'_>>,
     pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, Error> {
-    let posts: Vec<_> = sqlx::query_as!(PostRecord, "select id, title, body from posts")
-        .fetch_all(pool.get_ref())
+    let posts = Post::find_all(pool.get_ref())
         .await
-        .map_err(|e| error::ErrorInternalServerError(e))?
-        .into_iter()
-        .map(|record| Post {
-            id: record.id.to_string(),
-            title: record.title,
-            body: record.body,
-        })
-        .collect();
+        .map_err(|e| error::ErrorInternalServerError(e))?;
 
     let body = hb
         .render("index", &json!({ "posts": posts }))
@@ -59,18 +80,8 @@ async fn show(
     info: web::Path<(String,)>,
 ) -> Result<HttpResponse, Error> {
     let id = info.into_inner().0;
-    let uuid = sqlx::types::Uuid::parse_str(&id).map_err(|e| error::ErrorNotFound(e))?;
-    let record = sqlx::query_as!(PostRecord, "select id, title, body from posts where id = $1", uuid)
-        .fetch_one(pool.as_ref())
-        .await
+    let post = Post::find(pool.get_ref(), &id).await
         .map_err(|e| error::ErrorInternalServerError(e))?;
-
-    let post =
-        Post {
-            id: record.id.to_string(),
-            title: record.title,
-            body: record.body,
-        };
 
     let body = hb
         .render("show", &json!({ "post": post }))
