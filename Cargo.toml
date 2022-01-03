@@ -15,3 +15,6 @@ serde = "1.0.133"
 serde_json = "1.0.74"
 sqlx = { version = "0.5", features = [ "runtime-actix-native-tls" , "postgres", "uuid" ] }
 uuid = { version = "0.8.2", features = ["v4"] }
+
+[dev-dependencies]
+rusty-hook = "0.11.2"

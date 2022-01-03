@@ -1,11 +1,8 @@
 use std::env;
 
-use actix_web::{
-    error, get, middleware::Logger, web, App, Error, HttpResponse, HttpServer,
-};
+use actix_web::{error, get, middleware::Logger, web, App, Error, HttpResponse, HttpServer};
 use env_logger::Env;
 use handlebars::Handlebars;
-
 
 use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -40,7 +37,8 @@ async fn show(
     info: web::Path<(String,)>,
 ) -> Result<HttpResponse, Error> {
     let id = info.into_inner().0;
-    let post = Post::find(pool.get_ref(), &id).await
+    let post = Post::find(pool.get_ref(), &id)
+        .await
         .map_err(|e| error::ErrorInternalServerError(e))?;
 
     let body = hb
