@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc, NaiveDateTime};
 use serde::Serialize;
 use sqlx::PgPool;
 
@@ -6,11 +7,12 @@ pub struct Post {
     pub id: String,
     pub title: String,
     pub body: String,
+    pub created_at: NaiveDateTime,
 }
 
 impl Post {
     pub async fn find_all(pool: &PgPool) -> Result<Vec<Post>, Box<dyn std::error::Error>> {
-        let records = sqlx::query!("select id, title, body from posts")
+        let records = sqlx::query!("select * from posts")
             .fetch_all(pool)
             .await?;
 
@@ -20,6 +22,7 @@ impl Post {
                 id: record.id.to_string(),
                 title: record.title,
                 body: record.body,
+                created_at: record.created_at
             })
             .collect();
 
@@ -29,7 +32,7 @@ impl Post {
     pub async fn find(pool: &PgPool, id: &str) -> Result<Post, Box<dyn std::error::Error>> {
         let uuid = sqlx::types::Uuid::parse_str(&id)?;
 
-        let record = sqlx::query!("select id, title, body from posts where id = $1", uuid)
+        let record = sqlx::query!("select * from posts where id = $1", uuid)
             .fetch_one(pool)
             .await?;
 
@@ -37,6 +40,7 @@ impl Post {
             id: record.id.to_string(),
             title: record.title,
             body: record.body,
+            created_at: record.created_at
         };
 
         Ok(post)
@@ -44,7 +48,7 @@ impl Post {
 
     pub async fn create(pool: &PgPool, title: &str, body: &str) -> Result<Post, sqlx::Error> {
         let record = sqlx::query!(
-            "insert into posts (title, body) values ($1, $2) returning id, title, body",
+            "insert into posts (title, body) values ($1, $2) returning *",
             title,
             body
         )
@@ -55,6 +59,7 @@ impl Post {
             id: record.id.to_string(),
             title: record.title,
             body: record.body,
+            created_at: record.created_at
         };
 
         Ok(post)

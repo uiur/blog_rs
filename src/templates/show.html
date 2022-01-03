@@ -6,7 +6,10 @@
     {{#with post}}
       <h1>{{title}}</h1>
       <p>{{body}}</p>
-      <a href="/posts/{{id}}/edit">edit</a>
+      <time>{{created_at}}</time>
+      <div>
+        <a href="/posts/{{id}}/edit">edit</a>
+      </div>
       <form action="/posts/{{id}}" method="POST">
         <input type="hidden" name="_method" value="DELETE" />
         <input type="submit" value="delete" />
