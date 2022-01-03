@@ -59,4 +59,17 @@ impl Post {
 
         Ok(post)
     }
+
+    pub fn uuid(&self) -> Result<sqlx::types::Uuid, sqlx::types::uuid::Error> {
+        sqlx::types::Uuid::parse_str(&self.id)
+    }
+
+    pub async fn destroy(&self, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+        let id = self.uuid()?;
+        sqlx::query!("delete from posts where id = $1", id)
+            .execute(pool)
+            .await?;
+
+        Ok(())
+    }
 }

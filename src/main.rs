@@ -1,6 +1,9 @@
 use std::env;
 
-use actix_web::{error, get, middleware::Logger, post, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{
+    delete, error, get, http::header::HttpDate, middleware::Logger, post, web, App, Error,
+    HttpResponse, HttpServer,
+};
 use env_logger::Env;
 use handlebars::Handlebars;
 
@@ -69,6 +72,47 @@ async fn create(
         .finish())
 }
 
+#[derive(Deserialize)]
+struct FormData {
+    _method: String,
+}
+
+async fn destroy(
+    pool: web::Data<PgPool>,
+    info: web::Path<(String,)>,
+    form: web::Form<FormData>,
+) -> Result<HttpResponse, Error> {
+    let id = info.into_inner().0;
+    let post = Post::find(pool.get_ref(), &id)
+        .await
+        .map_err(|e| error::ErrorUnprocessableEntity(e))?;
+
+    post.destroy(pool.get_ref())
+        .await
+        .map_err(|e| error::ErrorInternalServerError(e))?;
+
+    Ok(HttpResponse::Found()
+        .append_header(("Location", "/"))
+        .finish())
+}
+
+#[post("/posts/{id}")]
+async fn handle_post_resource(
+    pool: web::Data<PgPool>,
+    info: web::Path<(String,)>,
+    form: web::Form<FormData>,
+) -> Result<HttpResponse, Error> {
+    if form._method == "DELETE" {
+        return destroy(pool, info, form).await;
+    }
+
+    if form._method == "PATCH" {
+        todo!()
+    }
+
+    Ok(HttpResponse::NotFound().finish())
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -99,6 +143,7 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .service(show)
             .service(create)
+            .service(handle_post_resource)
     })
     .bind("127.0.0.1:8000")?
     .run()

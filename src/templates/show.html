@@ -6,6 +6,10 @@
     {{#with post}}
       <h1>{{title}}</h1>
       <p>{{body}}</p>
+      <form action="/posts/{{id}}" method="POST">
+        <input type="hidden" name="_method" value="DELETE" />
+        <input type="submit" value="delete" />
+      </form>
     {{/with}}
   </body>
 </html>
