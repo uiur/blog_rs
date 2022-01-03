@@ -1,11 +1,12 @@
 <html>
   <title>
-    hello
+    {{title}}
   </title>
   <body>
     {{#with post}}
       <h1>{{title}}</h1>
       <p>{{body}}</p>
+      <a href="/posts/{{id}}/edit">edit</a>
       <form action="/posts/{{id}}" method="POST">
         <input type="hidden" name="_method" value="DELETE" />
         <input type="submit" value="delete" />

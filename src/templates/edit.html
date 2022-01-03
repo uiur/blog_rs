@@ -1,0 +1,20 @@
+<html>
+  <title>
+    {{title}}
+  </title>
+  <body>
+    {{#with post}}
+      <form action="/posts/{{id}}" method="POST">
+        <div>
+          <input type="text" placeholder="title" name="title" required value="{{title}}" />
+        </div>
+        <div>
+          <textarea placeholder="body" name="body" required>{{body}}</textarea>
+        </div>
+        <input type="hidden" name="_method" value="PATCH"  />
+        <input type="submit" />
+      </form>
+    {{/with}}
+  </body>
+</html>
+

@@ -72,4 +72,24 @@ impl Post {
 
         Ok(())
     }
+
+    pub async fn update(
+        &self,
+        pool: &PgPool,
+        title: &str,
+        body: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let id = self.uuid()?;
+
+        sqlx::query!(
+            "update posts set (title, body) = ($1, $2) where id = $3",
+            title,
+            body,
+            id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
 }

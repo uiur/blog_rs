@@ -52,6 +52,24 @@ async fn show(
     Ok(HttpResponse::Ok().body(body))
 }
 
+#[get("/posts/{id}/edit")]
+async fn edit(
+    hb: web::Data<Handlebars<'_>>,
+    pool: web::Data<PgPool>,
+    info: web::Path<(String,)>,
+) -> Result<HttpResponse, Error> {
+    let id = info.into_inner().0;
+    let post = Post::find(pool.get_ref(), &id)
+        .await
+        .map_err(|e| error::ErrorInternalServerError(e))?;
+
+    let body = hb
+        .render("edit", &json!({ "post": post }))
+        .map_err(|e| error::ErrorInternalServerError(e))?;
+
+    Ok(HttpResponse::Ok().body(body))
+}
+
 #[derive(Deserialize)]
 struct PostFormData {
     title: String,
@@ -75,12 +93,13 @@ async fn create(
 #[derive(Deserialize)]
 struct FormData {
     _method: String,
+    title: Option<String>,
+    body: Option<String>,
 }
 
 async fn destroy(
     pool: web::Data<PgPool>,
     info: web::Path<(String,)>,
-    form: web::Form<FormData>,
 ) -> Result<HttpResponse, Error> {
     let id = info.into_inner().0;
     let post = Post::find(pool.get_ref(), &id)
@@ -96,6 +115,26 @@ async fn destroy(
         .finish())
 }
 
+async fn update(
+    pool: web::Data<PgPool>,
+    info: web::Path<(String,)>,
+    form: web::Form<FormData>,
+) -> Result<HttpResponse, Error> {
+    let id = info.into_inner().0;
+    let post = Post::find(pool.get_ref(), &id)
+        .await
+        .map_err(|e| error::ErrorUnprocessableEntity(e))?;
+
+    let form = form.into_inner();
+    let title = form.title.expect("title required");
+    let body = form.body.expect("body required");
+    post.update(pool.get_ref(), &title, &body).await?;
+
+    Ok(HttpResponse::Found()
+        .append_header(("Location", format!("/posts/{}", id)))
+        .finish())
+}
+
 #[post("/posts/{id}")]
 async fn handle_post_resource(
     pool: web::Data<PgPool>,
@@ -103,11 +142,11 @@ async fn handle_post_resource(
     form: web::Form<FormData>,
 ) -> Result<HttpResponse, Error> {
     if form._method == "DELETE" {
-        return destroy(pool, info, form).await;
+        return destroy(pool, info).await;
     }
 
     if form._method == "PATCH" {
-        todo!()
+        return update(pool, info, form).await;
     }
 
     Ok(HttpResponse::NotFound().finish())
@@ -142,6 +181,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(index)
             .service(show)
+            .service(edit)
             .service(create)
             .service(handle_post_resource)
     })
