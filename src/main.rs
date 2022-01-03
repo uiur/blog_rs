@@ -1,9 +1,10 @@
 use std::env;
 
-use actix_web::{error, get, middleware::Logger, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{error, get, middleware::Logger, post, web, App, Error, HttpResponse, HttpServer};
 use env_logger::Env;
 use handlebars::Handlebars;
 
+use serde::Deserialize;
 use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
@@ -48,6 +49,26 @@ async fn show(
     Ok(HttpResponse::Ok().body(body))
 }
 
+#[derive(Deserialize)]
+struct PostFormData {
+    title: String,
+    body: String,
+}
+
+#[post("/posts")]
+async fn create(
+    pool: web::Data<PgPool>,
+    form: web::Form<PostFormData>,
+) -> Result<HttpResponse, Error> {
+    let post = Post::create(pool.get_ref(), &form.title, &form.body)
+        .await
+        .map_err(|e| error::ErrorInternalServerError(e))?;
+
+    Ok(HttpResponse::Found()
+        .append_header(("Location", format!("/posts/{}", post.id)))
+        .finish())
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -77,6 +98,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(index)
             .service(show)
+            .service(create)
     })
     .bind("127.0.0.1:8000")?
     .run()

@@ -11,6 +11,21 @@
           </a>
         </li>
       {{/each}}
+
+      <section>
+        <h2>new</h2>
+        <form action="/posts" method="POST">
+          <div>
+            <input type="text" placeholder="title" name="title" required />
+          </div>
+          <div>
+            <textarea placeholder="body" name="body" required></textarea>
+          </div>
+          <div>
+            <input type="submit" />
+          </div>
+        </form>
+      </section>
     </ul>
   </body>
 </html>

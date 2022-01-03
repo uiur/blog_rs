@@ -41,4 +41,22 @@ impl Post {
 
         Ok(post)
     }
+
+    pub async fn create(pool: &PgPool, title: &str, body: &str) -> Result<Post, sqlx::Error> {
+        let record = sqlx::query!(
+            "insert into posts (title, body) values ($1, $2) returning id, title, body",
+            title,
+            body
+        )
+        .fetch_one(pool)
+        .await?;
+
+        let post = Post {
+            id: record.id.to_string(),
+            title: record.title,
+            body: record.body,
+        };
+
+        Ok(post)
+    }
 }
